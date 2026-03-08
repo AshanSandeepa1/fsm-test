@@ -1,26 +1,37 @@
+using Microsoft.AspNetCore.Components.Web;
 using VanguardFSM.Web.Components;
+using NetTopologySuite.IO.Converters; // This requires the package above
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// 1. Add Blazor Server services
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// 2. Register HttpClient for the Dashboard
+builder.Services.AddScoped(sp => new HttpClient 
+{ 
+    BaseAddress = new Uri("http://localhost:5085/") 
+});
+
+// 3. Configure JSON to handle NetTopologySuite Points
+builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+{
+    options.SerializerOptions.Converters.Add(new GeoJsonConverterFactory());
+});
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
 
+app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseAntiforgery();
 
-app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
