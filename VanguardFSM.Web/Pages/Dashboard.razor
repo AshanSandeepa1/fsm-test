@@ -36,12 +36,22 @@ else
     </table>
 }
 
+<div class="alert @(dbStatus == "Online" ? "alert-success" : "alert-danger") shadow-sm">
+    <strong>DB Status:</strong> @dbStatus | 
+    <strong>Live Tasks in DB:</strong> @taskCount | 
+    <small>Last Checked: @lastChecked</small>
+</div>
+
 @code {
     private MapView? mapComponent;
     private List<TaskItem>? tasks;
+    private string dbStatus = "Checking...";
+    private int taskCount = 0;
+    private string lastChecked = "";
 
     protected override async Task OnInitializedAsync()
     {
+        await RefreshDbStatus();
         // Fetch tasks from your API
         tasks = await Http.GetFromJsonAsync<List<TaskItem>>("api/Dispatch/tasks");
     }
@@ -67,5 +77,24 @@ else
                 }
             }
         }
+    }
+    private async Task RefreshDbStatus()
+    {
+        try {
+            var result = await Http.GetFromJsonAsync<DbCheckResponse>("api/Dispatch/db-check");
+            if (result != null) {
+                dbStatus = result.Status;
+                taskCount = result.TotalTasks;
+                lastChecked = result.Timestamp;
+            }
+        } catch {
+            dbStatus = "Offline";
+        }
+    }
+
+    public class DbCheckResponse {
+        public string Status { get; set; } = "";
+        public int TotalTasks { get; set; }
+        public string Timestamp { get; set; } = "";
     }
 }

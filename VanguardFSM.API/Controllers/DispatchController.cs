@@ -38,6 +38,7 @@ public async Task<IActionResult> GetSuggestedWorkers(int taskId, double radiusIn
 
     return Ok(nearbyWorkers);
 }
+
 [HttpPost("assign-task/{taskId}/{workerId}")]
 public async Task<IActionResult> AssignTask(int taskId, int workerId)
 {
@@ -60,4 +61,26 @@ public async Task<IActionResult> AssignTask(int taskId, int workerId)
 
     return Ok($"Task {taskId} successfully dispatched to {worker.Name}");
 }
+
+[HttpGet("db-check")]
+public async Task<IActionResult> CheckDb()
+{
+    try 
+    {
+        // This actually hits the SQL Server to see if it's awake
+        bool canConnect = await _context.Database.CanConnectAsync();
+        var taskCount = await _context.Tasks.CountAsync();
+        
+        return Ok(new { 
+            Status = "Online", 
+            TotalTasks = taskCount, 
+            Timestamp = DateTime.Now.ToShortTimeString() 
+        });
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, new { Status = "Offline", Error = ex.Message });
+    }
+}
+
 }
