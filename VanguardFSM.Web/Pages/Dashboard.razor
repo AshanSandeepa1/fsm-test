@@ -1,5 +1,6 @@
 @page "/dashboard"
 @using VanguardFSM.Shared.Models
+@using VanguardFSM.Web.Components
 @inject HttpClient Http
 
 <h3>Dispatcher Dashboard</h3>
@@ -36,17 +37,35 @@ else
 }
 
 @code {
+    private MapView? mapComponent;
     private List<TaskItem>? tasks;
 
     protected override async Task OnInitializedAsync()
     {
-        // In a real scenario, you'd have a GET /api/tasks endpoint
-        // For now, we are focusing on the functional flow
+        // Fetch tasks from your API
+        tasks = await Http.GetFromJsonAsync<List<TaskItem>>("api/Dispatch/tasks");
     }
 
-    private void DispatchTask(int id)
+    private async Task DispatchTask(int taskId)
     {
-        // This will navigate to a search page or open a modal
-        Console.WriteLine($"Dispatching task {id}");
+        // 1. Call the API to find workers within 5km (5000 meters)
+        var nearbyWorkers = await Http.GetFromJsonAsync<List<User>>($"api/Dispatch/suggest-workers/{taskId}/5000");
+
+        if (nearbyWorkers != null && mapComponent != null)
+        {
+            foreach (var worker in nearbyWorkers)
+            {
+                // 2. Plot them on the map
+                // Note: We use .X for Longitude and .Y for Latitude from NetTopologySuite
+                if (worker.LastKnownLocation != null)
+                {
+                    await mapComponent.AddWorkerMarker(
+                        worker.LastKnownLocation.Y, 
+                        worker.LastKnownLocation.X, 
+                        worker.Name, 
+                        true);
+                }
+            }
+        }
     }
 }
